@@ -1,7 +1,7 @@
 from cli_py2 import cli_ugs as UGS
 from email_scanner import scan_email
 from image_gen import img_gen
-from vectorize import vectorize
+from vectorize import vectorize_image
 
 from icrawler.builtin import GoogleImageCrawler
 import os
@@ -45,7 +45,7 @@ def cnc_machine():
         time.sleep(30)
     
     create_gcode(topic)
-    UGS(out_file, port)
+    #UGS(out_file, port)
     
     
     
@@ -93,7 +93,7 @@ def create_gcode(topic):
             filename = os.path.join(dir,file)
             im = Image.open(filename)
             im.save("prints/out.png")
-            vectorize(out_file)
+            vectorize_image("prints/out.png", out_file)
             break
         
         return

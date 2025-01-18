@@ -7,6 +7,7 @@ import time
 import cv2
 import numpy as np
 import copy
+from math import sqrt
 
 def monochrome(image_path):
     global img
@@ -25,7 +26,7 @@ def get_outline_pixels(image_path):
     image = Image.open(image_path)
     image = image.convert(mode='RGB')
     image = image.filter(ImageFilter.FIND_EDGES)
-    new_image_path = image_path.replace(".png", "_1.png")
+    new_image_path = image_path.replace(".png", "_1.png").replace(".jpg", "_1.jpg")
 
 
     image.save(new_image_path) 
@@ -101,8 +102,10 @@ def img_to_coords(image_path):
     #get image pixels
     #if there is a lot of black, then the image is a sillouette and we can use the outline
     # convert to image outline, then extract pixels 
-    if perc_black > .05:
+    #if perc_black > .05:
+    if True:
         x, y, coords = get_outline_pixels(image_path)
+        #for the time being, always use the outline
         
     #else, the image is already a line drawing
     # convert to pixels           
@@ -127,7 +130,7 @@ def create_gcode_two_pens(vectors, out_file):
     color_flip = True
 
     #offset for different pens
-    x_offset =  400
+    x_offset =  -300
     #x_offset = 0
 
     
@@ -145,7 +148,7 @@ def create_gcode_two_pens(vectors, out_file):
 
     #shift entire drawing
     #x_shift = max_dim*.8
-    x_shift = 0
+    x_shift = -200
 
     for v in vectors:
         g_code.append(f"G0 {z_up}")
@@ -193,18 +196,34 @@ def create_gcode(vectors, out_file):
 
     g_code.append("G92X0Y0\n")
 
-    z_color1 = "Z200\n"
+    z_color1 = "Z0\n"
     #to flip colors
-    z_up = "Z0\n"
-    color_flip = True    
+    z_up = "Z400\n"
 
     print("Brian")
     max_xy = 0
+    min_x = 100000
+    min_y = 100000
     for v in vectors:
         for coord in v:
-            max_xy = max(max_xy, max(coord))
+            min_x = min(min_x, coord[0])
+            min_y = min(min_y,coord[1])
 
-    max_dim = 800
+
+    new_vectors = []
+
+    for v in vectors:
+        new_v = []
+        for coord in v:
+            new_x = coord[0] - min_x
+            new_y = coord[1] - min_y
+            new_v.append((new_x, new_y))
+            max_xy = max(max_xy, max(new_x, new_y))
+        new_vectors.append(new_v)
+    
+    vectors = new_vectors
+
+    max_dim = 400
     scale = max_dim/max_xy
     prev_line = ""
 
@@ -218,15 +237,10 @@ def create_gcode(vectors, out_file):
         for elem in v:
             if start:
                 z = z_color1
-                #uncommnet to use both colors
-                color_flip = False
                 x_pos = elem[0] + x_shift
-                    
-                    
                 line = f'G0 X{x_pos*scale} Y{elem[1]*scale} {z_up} G0 {z}'
-                #color_flip = color_flip
-                #print(color_flip)
                 start = False
+
             else:
                 x_pos = elem[0] + x_shift
                     
@@ -236,7 +250,7 @@ def create_gcode(vectors, out_file):
                 g_code.append(line)
             prev_line = line
 
-    g_code.append("G0 Z0\n")
+    g_code.append("G0 Z400\n")
     g_code.append("G0 X0 Y0\n")
     g_code.append("$H\n")
 
@@ -247,6 +261,7 @@ def create_gcode(vectors, out_file):
 def plot_vectors(vectors):
     fig = plt.figure()
     ax = fig.add_subplot()
+    print(f"vector length: {len(vectors)}")
     for i in range(len(vectors)):
         v0 = []
         v1 = []
@@ -263,14 +278,40 @@ def plot_vectors(vectors):
         
     plt.xlim(0)
     plt.draw()
-    plt.show()
+    
 
-def coords_to_vectors(coords, min_vector_length, max_depth , z_hop_depth):
+def find_next_pixel(coords_, lim_x, lim_y, curr_x, curr_y, v1, min_jump, max_jump):
+    end = True
+    #look at the pixels in the box
+    for k in range(min_jump, max_jump):
+        box = boxes[k]
+        for i in range(len(box)):
+            new_x = curr_x + box[i][0]
+            new_y = curr_y+ box[i][1]
+
+            if new_x >= lim_x or new_y >= lim_y or new_x <0 or new_y <0:
+                continue
+
+            if coords_[new_x, new_y] == 1:
+                v1.append((new_x, new_y))
+                v1.append((new_x, new_y))
+                end = False
+
+            coords_[new_x, new_y] = 0
+            
+        if not end:
+            break
+
+    return coords_, v1, end
+
+def coords_to_vectors(coords, min_vector_length):
     coords_ = copy.deepcopy(coords)
+    global boxes 
     boxes = []
     for i in range(1,max_depth+1):
         boxes.append(generate_box_coords(i))
 
+    closed_vectors = []
     vectors = []
     lim_x = len(coords_)
     lim_y = len(coords_[0])
@@ -278,6 +319,7 @@ def coords_to_vectors(coords, min_vector_length, max_depth , z_hop_depth):
 
     #while there are still unvisited pixels
     while 1 in coords_:
+        
         #create a new contiguous vector
         v1 = []
         #start at the next unvisited pixel
@@ -288,92 +330,65 @@ def coords_to_vectors(coords, min_vector_length, max_depth , z_hop_depth):
 
         #mark as visited
         coords_[start_x, start_y] = 0
-        
-        end = False
 
         #add to the contiguous vector
         v1.append((start_x, start_y))
+        end = False
 
         #while there are still unvisited pixels near the current pixel
         while not end:
-            end = True
-            curr_x = start_x
-            curr_y = start_y
-
-            #look at the pixels in the box
-            for k in range(z_hop_depth):
-                box = boxes[k]
-                for i in range(len(box)):
-                    new_x = curr_x + box[i][0]
-                    new_y = curr_y+ box[i][1]
-
-                    if new_x >= lim_x or new_y >= lim_y or new_x <0 or new_y <0:
-                        continue
-
-                    if coords_[new_x, new_y] == 1:
-                        v1.append((new_x, new_y))
-                        v1.append((new_x, new_y))
-                        start_x = new_x
-                        start_y = new_y
-                        end = False
-
-                    coords_[new_x, new_y] = 0
-                    
-                if not end:
-                    break
+            curr_x = v1[-1][0]
+            curr_y = v1[-1][1]
+            coords_, v1, end = find_next_pixel(coords_, lim_x, lim_y, curr_x, curr_y, v1, 0, z_hop_depth)
                 
             if end:
                 #if the vector is big enough to show up when drawing, then add to list
                 if len(v1)> min_vector_length:
                     #print(len(v1))
+                    #if the vec#tor ends near its initial point, then add to closed vectors
+                    if v1 and sqrt((v1[0][0] - v1[-1][0])**2 + (v1[0][1] - v1[-1][1])**2) < max_depth:
+                        closed_vectors.append(v1)
+
                     vectors.append(v1)
                     
+                curr_x = v1[-1][0]
+                curr_y = v1[-1][1]
+
                 #reset the vector
                 v1 = []
                     
                 #this is to find the closes z-hop pixed, to minimize drawbot travel
-                for k in range(z_hop_depth, max_depth):
-                    box = boxes[k]
-                    for i in range(len(box)):
-                        new_x = curr_x + box[i][0]
-                        new_y = curr_y+ box[i][1]
-
-                        if new_x >= lim_x or new_y >= lim_y:
-                            continue
-
-                        if coords_[new_x, new_y] == 1:
-                            #if a value is found, start a new vector without leaving the current pixel
-                            start_x = new_x
-                            start_y = new_y
-                            end = False
-
-                        coords_[new_x, new_y] = 0
-
-                    if not end:
-                        break  
+                coords_, v1, end = find_next_pixel(coords_, lim_x, lim_y, curr_x, curr_y, v1, z_hop_depth, max_depth)
                 #if no new pixels are found, start a new vector at the next unvisited pixel in coords
+            
+    return vectors, closed_vectors
 
-    return vectors
+def vectorize_image(image_path, out_file, min_vector_length = 20, max_depth_ = 100, z_hop_depth_ = 10):
 
-def vectorize_image(image_path, out_file, min_vector_length, max_depth = 60, z_hop_depth = 20):
+    global max_depth
+    global z_hop_depth
+
+    max_depth = max_depth_
+    z_hop_depth = z_hop_depth_
+
     time.sleep(1)
-    image_path = "prints/out.png"
     
     x, y, coords = img_to_coords(image_path)
-    
+
     #make array copies so that they can be modified
-    vectors = coords_to_vectors(coords, min_vector_length, max_depth, z_hop_depth)
+    vectors, closed_vectors = coords_to_vectors(coords, min_vector_length)
     
-    while len(vectors) > 50:
-        min_vector_length += 25
-        vectors = coords_to_vectors(coords, min_vector_length, max_depth, z_hop_depth)
+    
 
     plot_vectors(vectors)
+    #plot_vectors(closed_vectors)
+    plt.show()
 
     create_gcode(vectors, out_file)    
 
 if __name__ == '__main__':
-    image_path = "prints/out.png"
-    #out_file = "C:/Users/bfora/Desktop/cnc/out.nc"
-    out_file = "test.nc"
-    vectorize_image(image_path, out_file, 150)
+    image_path = "prints/T Rex.jpg"
+    out_file = "C:/Users/bfora/Desktop/cnc/out.nc"
+    #out_file = "test.nc"
+    vectorize_image(image_path, out_file, 20)
+    print("done")
