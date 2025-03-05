@@ -192,13 +192,21 @@ def create_gcode_two_pens(vectors, out_file):
 
 def create_gcode(vectors, out_file):
     g_code = []
-    g_code.append("F40000\n")
-
-    g_code.append("G92X0Y0\n")
+    g_code.append("F100000\n")  #feedrate
+    g_code.append("G0 Z400\n")  #move up
+    g_code.append("G04 P1\n")   #pause
+    g_code.append("G92X0Y0\n")  #move to 0,0
 
     z_color1 = "Z0\n"
     #to flip colors
     z_up = "Z400\n"
+
+    #gcode to move the roll of paper to make room for the next drawing
+    g_code.append("G0 Z400\n")
+    g_code.append("M03\n")  
+    g_code.append("G04 P5\n")
+    g_code.append("M05\n")
+    g_code.append("G04 P1\n")
 
     print("Brian")
     max_xy = 0
@@ -223,7 +231,7 @@ def create_gcode(vectors, out_file):
     
     vectors = new_vectors
 
-    max_dim = 400
+    max_dim = size_
     scale = max_dim/max_xy
     prev_line = ""
 
@@ -251,8 +259,7 @@ def create_gcode(vectors, out_file):
             prev_line = line
 
     g_code.append("G0 Z400\n")
-    g_code.append("G0 X0 Y0\n")
-    g_code.append("$H\n")
+    g_code.append("G0 X-10 Y-10\n")
 
     with open(out_file, "w") as output:
         for line in g_code:
@@ -363,10 +370,17 @@ def coords_to_vectors(coords, min_vector_length):
             
     return vectors, closed_vectors
 
-def vectorize_image(image_path, out_file, min_vector_length = 20, max_depth_ = 100, z_hop_depth_ = 10):
+def vectorize_image(image_path, out_file, size, min_vector_length = 20, max_depth_ = 100, z_hop_depth_ = 10):
 
     global max_depth
     global z_hop_depth
+    global size_
+
+    if size > 600:
+        size = 600
+        print("too large, setting size to 600")
+    size_ = size
+
 
     max_depth = max_depth_
     z_hop_depth = z_hop_depth_
@@ -382,7 +396,7 @@ def vectorize_image(image_path, out_file, min_vector_length = 20, max_depth_ = 1
 
     plot_vectors(vectors)
     #plot_vectors(closed_vectors)
-    plt.show()
+    #plt.show()
 
     create_gcode(vectors, out_file)    
 

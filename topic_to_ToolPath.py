@@ -36,8 +36,8 @@ topic_fname = ""
 
 def cnc_machine():
     #hardcode port for now
-    port = 5
-    topic = input()
+    port = 3
+    topic = input("What shall we draw? ")
     #topic = None
     while topic == None:
         topic = scan_email()
@@ -45,7 +45,7 @@ def cnc_machine():
         time.sleep(30)
     
     create_gcode(topic)
-    #UGS(out_file, port)
+    UGS(out_file, port)
     
     
     
@@ -93,7 +93,7 @@ def create_gcode(topic):
             filename = os.path.join(dir,file)
             im = Image.open(filename)
             im.save("prints/out.png")
-            vectorize_image("prints/out.png", out_file)
+            vectorize_image("prints/out.png", out_file, size = int(input("how big? ")))
             break
         
         return
