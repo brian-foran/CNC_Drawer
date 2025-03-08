@@ -29,6 +29,8 @@ import time
 
 import cv2
 import numpy as np
+
+import shutil
             
 #request topic
 out_file = ""
@@ -64,17 +66,10 @@ def create_gcode(topic):
     
     topic_fname = topic.replace(" ","_")
     out_file = "C:/Users/bfora/Desktop/cnc/" + topic_fname + ".nc"
-    #check whether topic is already in cnc folder
-    
-    #remove existing 000001.png 
-    
-    if os.path.isfile(out_file) and os.stat(out_file).st_size > 1000:
-        print("already done")
-        return
-    
-    dir = "prints"
 
-    
+
+    #remove existing 000001.png     
+    dir = "prints"
     
     for file in os.listdir(dir):
         filename = os.path.join(dir,file)
@@ -84,10 +79,19 @@ def create_gcode(topic):
         except OSError:
             print("not there")
 
-    img_gen(topic)
+    #check if the topic has already been generated
+    image_file = "generated_images/" + topic + ".jpg"
+    if os.path.exists(image_file):
+        if not os.path.exists("prints"):
+            raise ValueError("prints folder not found")
+        shutil.copy(image_file, "prints/image.jpg")
+    else:
+        raise ValueError("Brian Test Failed")
+        img_gen(topic)
 
     time.sleep(1)
 
+    #vectorize the image
     print(os.listdir(dir))
 
     if os.listdir(dir):

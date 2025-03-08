@@ -19,6 +19,14 @@ def run_script():
     # Add code here to run your Python script
     topic = request.args.get('topic')
     topic = topic.replace("_", " ")
+
+    #check if it is just a test
+    if topic == "test":
+        print("Test mode")
+        #update_photon.write_to_particle_variable("CNC_Start")
+        return 'Test mode'
+    
+    update_photon.write_to_particle_variable("CNC_Start")
     com_port = 3
     print(topic)
 
@@ -27,9 +35,13 @@ def run_script():
     if video_file:
         upload_to_s3(video_file)
         print("Video uploaded to GitHub Pages!")
-        push_env_json(video_file)
+        push_env_json(video_file, topic) 
+    
+    else:
+        print("Video not uploaded to GitHub Pages.")
+        return 'Script failed to execute'
 
-    update_photon.main()
+    update_photon.write_to_particle_variable("CNC_Done")
 
     print("done")
     return 'Script executed successfully!'
