@@ -1,6 +1,6 @@
 from cli_py2 import cli_ugs as UGS
 from email_scanner import scan_email
-from image_gen import img_gen
+from API_Files.image_gen import img_gen
 from vectorize import vectorize_image
 
 from icrawler.builtin import GoogleImageCrawler

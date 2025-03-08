@@ -123,10 +123,10 @@ def create_gcode_two_pens(vectors, out_file):
 
     g_code.append("G92X0Y0\n")
 
-    z_color1 = "Z200\n"
+    z_down = "z200\n"
     #to flip colors
-    z_color2 = "Z-200\n"
-    z_up = "Z0\n"
+    z_color2 = "z-200\n"
+    z_up = "z0\n"
     color_flip = True
 
     #offset for different pens
@@ -151,12 +151,13 @@ def create_gcode_two_pens(vectors, out_file):
     x_shift = -200
 
     for v in vectors:
-        g_code.append(f"G0 {z_up}")
+        g_code.append(f"{z_up}")
         start = True
         for elem in v:
+            elem[0], elem[1] = elem[1], elem[0]     #flip x and y
             if start:
                 if color_flip:
-                    z = z_color1
+                    z = z_down
                     #uncommnet to use both colors
                     color_flip = False
                     x_pos = elem[0] + x_offset + x_shift
@@ -166,7 +167,7 @@ def create_gcode_two_pens(vectors, out_file):
                     color_flip = True
                     x_pos = elem[0] + x_shift
                     
-                line = f'G0 X{x_pos*scale} Y{elem[1]*scale} {z_up} G0 {z}'
+                line = f'G0 X{x_pos*scale} Y{elem[1]*scale} {z_up} {z}'
                 #color_flip = color_flip
                 #print(color_flip)
                 start = False
@@ -182,7 +183,7 @@ def create_gcode_two_pens(vectors, out_file):
                 g_code.append(line)
             prev_line = line
 
-    g_code.append("G0 Z0\n")
+    g_code.append("G0 z0\n")
     g_code.append("G0 X0 Y0\n")
     g_code.append("$H\n")
 
@@ -192,19 +193,19 @@ def create_gcode_two_pens(vectors, out_file):
 
 def create_gcode(vectors, out_file):
     g_code = []
+
+    z_down = "G0 z400\n"
+    #to flip colors
+    z_up = "G0 z0\n"
+
     g_code.append("F100000\n")  #feedrate
-    g_code.append("G0 Z400\n")  #move up
+    g_code.append(z_up)  #move up
     g_code.append("G04 P1\n")   #pause
     g_code.append("G92X0Y0\n")  #move to 0,0
 
-    z_color1 = "Z0\n"
-    #to flip colors
-    z_up = "Z400\n"
-
     #gcode to move the roll of paper to make room for the next drawing
-    g_code.append("G0 Z400\n")
     g_code.append("M03\n")  
-    g_code.append("G04 P5\n")
+    g_code.append("G04 P4\n")
     g_code.append("M05\n")
     g_code.append("G04 P1\n")
 
@@ -214,8 +215,8 @@ def create_gcode(vectors, out_file):
     min_y = 100000
     for v in vectors:
         for coord in v:
-            min_x = min(min_x, coord[0])
-            min_y = min(min_y,coord[1])
+            min_x = min(min_x, coord[1])
+            min_y = min(min_y,coord[0])
 
 
     new_vectors = []
@@ -223,8 +224,9 @@ def create_gcode(vectors, out_file):
     for v in vectors:
         new_v = []
         for coord in v:
-            new_x = coord[0] - min_x
-            new_y = coord[1] - min_y
+            #flip x and y and find max
+            new_x = coord[1] - min_x
+            new_y = coord[0] - min_y
             new_v.append((new_x, new_y))
             max_xy = max(max_xy, max(new_x, new_y))
         new_vectors.append(new_v)
@@ -240,13 +242,13 @@ def create_gcode(vectors, out_file):
     x_shift = 0
 
     for v in vectors:
-        g_code.append(f"G0 {z_up}")
+        g_code.append(f"{z_up}")
         start = True
         for elem in v:
             if start:
-                z = z_color1
+                z = z_down
                 x_pos = elem[0] + x_shift
-                line = f'G0 X{x_pos*scale} Y{elem[1]*scale} {z_up} G0 {z}'
+                line = f'G0 X{x_pos*scale} Y{elem[1]*scale} \n {z_up} {z}'
                 start = False
 
             else:
@@ -258,7 +260,7 @@ def create_gcode(vectors, out_file):
                 g_code.append(line)
             prev_line = line
 
-    g_code.append("G0 Z400\n")
+    g_code.append(z_up)
     g_code.append("G0 X-10 Y-10\n")
 
     with open(out_file, "w") as output:
@@ -401,8 +403,8 @@ def vectorize_image(image_path, out_file, size, min_vector_length = 20, max_dept
     create_gcode(vectors, out_file)    
 
 if __name__ == '__main__':
-    image_path = "prints/T Rex.jpg"
+    image_path = "prints/out.png"
     out_file = "C:/Users/bfora/Desktop/cnc/out.nc"
     #out_file = "test.nc"
-    vectorize_image(image_path, out_file, 20)
+    vectorize_image(image_path, out_file, 600)
     print("done")

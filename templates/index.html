@@ -1,16 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Argument Input</title>
+    <title>DrawBOT Landing Page</title>
 </head>
 <body>
-    <h2>Enter Arguments</h2>
-    <form action="/run_script" method="post">
-        <label for="arg1">What to draw? </label>
-        <input type="text" id="arg1" name="arg1"><br><br>
-        <label for="arg2">Port: </label>
-        <input type="text" id="arg2" name="arg2"><br><br>
+    <h2>What Should We Draw?</h2>
+    <form id="drawForm" method="get">
+        <label for="topic">What to draw? </label>
+        <input type="text" id="topic" name="topic"><br><br>
         <input type="submit" value="Submit">
     </form>
+
+    <script>
+        document.getElementById('drawForm').onsubmit = function() {
+            var topic = document.getElementById('topic').value;
+            this.action = '/run_script?topic=' + encodeURIComponent(topic);
+        };
+    </script>
 </body>
 </html>

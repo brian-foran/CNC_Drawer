@@ -1,6 +1,6 @@
 from cli_py2 import cli_ugs as UGS
-from email_scanner import scan_email
-from image_gen import img_gen
+from record_v2 import CameraRecorder
+from API_Files.image_gen import img_gen
 from vectorize import vectorize_image
 
 from icrawler.builtin import GoogleImageCrawler
@@ -36,9 +36,27 @@ topic_fname = ""
 
 def cnc_machine(topic, port):
     create_gcode(topic)
-    UGS(out_file, port)
-    #look at RA files, change it so that all images are gcoded and the smallest (0ver 1kb) file is moved to cnc
-    return 1
+
+    #gcode is now created
+    #start camera 
+    recorder = CameraRecorder()
+    video_file = recorder.output_file
+    try:
+        UGS(out_file, port)
+    except:
+        print("failed")
+        return 0
+    
+    time.sleep(20)  #give the camera frames to linger on the final product
+    recorder.stop_recording()
+
+    if recorder.cap.isOpened():
+        recorder.cap.release()
+    if recorder.out.isOpened():
+        recorder.out.release()
+    cv2.destroyAllWindows()
+    
+    return video_file
 
 def create_gcode(topic):
     global out_file
@@ -88,5 +106,5 @@ def create_gcode(topic):
 
 
 if __name__ == '__main__':
-    cnc_machine()
+    cnc_machine(input(), 3)
 

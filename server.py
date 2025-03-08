@@ -1,4 +1,7 @@
 from flask import Flask, request, render_template
+from API_Files.aws_s3 import upload_to_s3
+import API_Files.update_photon as update_photon
+from API_Files.update_pages import push_env_json
 
 import sys
 import os
@@ -17,9 +20,18 @@ def run_script():
     topic = request.args.get('topic')
     topic = topic.replace("_", " ")
     com_port = 3
-    #print(topic)
+    print(topic)
 
-    cnc_machine(topic, com_port)
+    video_file = cnc_machine(topic, com_port)
+
+    if video_file:
+        upload_to_s3(video_file)
+        print("Video uploaded to GitHub Pages!")
+        push_env_json(video_file)
+
+    update_photon.main()
+
+    print("done")
     return 'Script executed successfully!'
 
 if __name__ == '__main__':
