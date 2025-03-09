@@ -23,7 +23,6 @@ def run_script():
     #check if it is just a test
     if topic == "test":
         print("Test mode")
-        #update_photon.write_to_particle_variable("CNC_Start")
         return 'Test mode'
     
     update_photon.write_to_particle_variable("CNC_Start")
@@ -33,9 +32,13 @@ def run_script():
     video_file = cnc_machine(topic, com_port)
 
     if video_file:
-        upload_to_s3(video_file)
+        s3_url = upload_to_s3(video_file)
         print("Video uploaded to GitHub Pages!")
-        push_env_json(video_file, topic) 
+        if s3_url:
+            push_env_json(s3_url, topic)
+        else:
+            print("Video not uploaded to S3")
+            return 'Script failed to execute'
     
     else:
         print("Video not uploaded to GitHub Pages.")
