@@ -36,8 +36,8 @@ import shutil
 out_file = ""
 topic_fname = ""
 
-def cnc_machine(topic, port):
-    create_gcode(topic)
+def cnc_machine(topic, local, image, port = 3):
+    create_gcode(topic, image)
 
     #gcode is now created
     #start camera 
@@ -60,7 +60,7 @@ def cnc_machine(topic, port):
     
     return video_file
 
-def create_gcode(topic):
+def create_gcode(topic, image):
     global out_file
     global topic_fname
     
@@ -68,47 +68,49 @@ def create_gcode(topic):
     out_file = "C:/Users/bfora/Desktop/cnc/" + topic_fname + ".nc"
 
 
-    #remove existing 000001.png     
-    dir = "prints"
-    
-    for file in os.listdir(dir):
-        filename = os.path.join(dir,file)
-        try:
-            os.remove(filename)
-            print("removed")
-        except OSError:
-            print("not there")
+    if image:
+        vectorize_image(image, out_file, size = 600)
 
-    #check if the topic has already been generated
-    image_file = "generated_images/" + topic + ".jpg"
-    if os.path.exists(image_file):
-        if not os.path.exists("prints"):
-            raise ValueError("prints folder not found")
-        shutil.copy(image_file, "prints/image.jpg")
     else:
-        raise ValueError("Brian Test Failed")
-        img_gen(topic)
-
-    time.sleep(1)
-
-    #vectorize the image
-    print(os.listdir(dir))
-
-    if os.listdir(dir):
-        for file in os.listdir(dir):
-            print(file)
-            filename = os.path.join(dir,file)
-            im = Image.open(filename)
-            im.save("prints/out.png")
-            vectorize_image("prints/out.png", out_file, size = 600)
-            break
+        #remove existing 000001.png     
+        dir = "prints"
         
-        return
-    else:
-        exit()
+        for file in os.listdir(dir):
+            filename = os.path.join(dir,file)
+            try:
+                os.remove(filename)
+                print("removed")
+            except OSError:
+                print("not there")
+
+        #check if the topic has already been generated
+        image_file = "generated_images/" + topic + ".jpg"
+        if os.path.exists(image_file):
+            if not os.path.exists("prints"):
+                raise ValueError("prints folder not found")
+            shutil.copy(image_file, "prints/image.jpg")
+        else:
+            img_gen(topic)
+
+        time.sleep(1)
+
+        #vectorize the image
+
+        if os.listdir(dir):
+            for file in os.listdir(dir):
+                print(file)
+                filename = os.path.join(dir,file)
+                im = Image.open(filename)
+                im.save("prints/out.png")
+                vectorize_image("prints/out.png", out_file, size = 600)
+                break
+            
+            return
+        else:
+            exit()
 
 
 
 if __name__ == '__main__':
-    cnc_machine(input(), 3)
+    cnc_machine(input(), 3, True)
 

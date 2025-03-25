@@ -192,6 +192,7 @@ def create_gcode_two_pens(vectors, out_file):
             output.write(line)
 
 def create_gcode(vectors, out_file):
+    print(vectors)
     g_code = []
 
     z_down = "G0 z400\n"
@@ -406,5 +407,5 @@ if __name__ == '__main__':
     image_path = "prints/out.png"
     out_file = "C:/Users/bfora/Desktop/cnc/out.nc"
     #out_file = "test.nc"
-    vectorize_image(image_path, out_file, 600)
+    vectorize_image(image_path, out_file, 400)
     print("done")

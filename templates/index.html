@@ -11,11 +11,61 @@
         <input type="submit" value="Submit">
     </form>
 
+    <h2>OR</h2>
+
+    <h2>Upload or Paste an Image to Draw</h2>
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept="image/*" required>
+        <button type="submit">Upload</button>
+    </form>
+    <p id="status"></p>
+
     <script>
         document.getElementById('drawForm').onsubmit = function() {
             var topic = document.getElementById('topic').value;
             this.action = '/run_script?topic=' + encodeURIComponent(topic);
         };
+
+        document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            
+            let fileInput = document.getElementById("fileInput").files[0];
+            if (!fileInput) return;
+
+            let formData = new FormData();
+            formData.append("file", fileInput);
+
+            document.getElementById("status").innerText = "Uploading...";
+            
+            let response = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            let result = await response.text();
+            document.getElementById("status").innerText = result;
+        });
+
+        document.addEventListener("paste", async (event) => {
+            let items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let item of items) {
+                if (item.kind === "file" && item.type.startsWith("image/")) {
+                    let file = item.getAsFile();
+                    let formData = new FormData();
+                    formData.append("file", file);
+
+                    document.getElementById("status").innerText = "Uploading...";
+
+                    let response = await fetch("/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    let result = await response.text();
+                    document.getElementById("status").innerText = result;
+                }
+            }
+        });
     </script>
 </body>
 </html>
